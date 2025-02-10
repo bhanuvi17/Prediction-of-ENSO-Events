@@ -1,6 +1,6 @@
-numpy
+streamlit
 pandas
+numpy
 plotly
 tensorflow
 scikit-learn
-matplotlib
