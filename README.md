@@ -1,48 +1,48 @@
-✨ ENSO Events Prediction using LSTM
+# 🌊 ENSO Events Prediction using LSTM
 
-This is an ENSO (El Niño-Southern Oscillation) Time Series Prediction web application built using Streamlit and LSTM Neural Networks. The model predicts the Oceanic Niño Index (ONI) based on historical ENSO data.
-
----
-
-📌 Features
-
-✅ Predict ENSO events based on historical ONI values  
-✅ Interactive dashboard using Streamlit  
-✅ Time series forecasting using LSTM (Long Short-Term Memory) networks  
-✅ Data visualization using Plotly and Matplotlib  
-✅ Deployed on Streamlit Cloud  
+This project performs **time series prediction** of the **Oceanic Niño Index (ONI)** using **Long Short-Term Memory (LSTM) networks**. The ONI time series is extracted from the dataset `ENSO.csv`, and the model forecasts the ONI values for the upcoming months based on historical data.
 
 ---
 
-📂 Project Structure
+## 📌 Features
+
+✅ Predicts future ONI values using LSTM neural networks  
+✅ Interactive dashboard built with **Streamlit**  
+✅ Data visualization using **Matplotlib** and **Plotly**  
+✅ Model trained using **TensorFlow/Keras**  
+✅ Deployed on **Streamlit Cloud**  
+
+---
+
+## 📂 Project Structure
 
 ```
-enso_prediction/
-│── ENSO.csv                    # Dataset (ONI values)
-│── model_lstm.keras            # Trained LSTM model
-│── enso_prediction.ipynb       # Jupyter Notebook for training
-│── dashboard.py                # Streamlit dashboard (main file)
-│── requirements.txt            # Dependencies
-│── Procfile                    # Streamlit deployment config
-│── README.md                   # Project info
-│── .gitignore                  # Ignore unnecessary files
-│── enso_env/                   # Virtual environment
-│── .devcontainer/              # Development container settings
+ENSO_EVENTS_PREDICTION/
+│── .devcontainer/              # Development container configuration
+│── enso_env/                   # Virtual environment setup
+│── .gitignore                   # Git ignore file
+│── dashboard.py                 # Streamlit dashboard
+│── enso_prediction.ipynb        # Jupyter Notebook for LSTM model training
+│── ENSO.csv                     # Dataset used for training and testing
+│── model_lstm.keras             # Saved LSTM model
+│── Procfile                     # Deployment configuration for Streamlit
+│── README.md                    # Project documentation
+│── requirements.txt              # Dependencies list
 ```
 
 ---
 
-🛠 Technologies Used
+## 🎯 Technologies Used
 
-- **Backend:** TensorFlow, Keras  
-- **Frontend:** Streamlit  
-- **Machine Learning:** LSTM, Scikit-Learn, Pandas, NumPy  
+- **Machine Learning:** TensorFlow, Keras, scikit-learn  
+- **Data Processing:** Pandas, NumPy  
 - **Visualization:** Matplotlib, Plotly  
+- **Web Application:** Streamlit  
 - **Deployment:** Streamlit Cloud  
 
 ---
 
-🔧 Installation & Setup
+## 🔧 Installation & Setup
 
 ### 🔹 Clone the Repository
 ```bash
@@ -62,60 +62,58 @@ enso_env\Scripts\activate  # On Windows
 pip install -r requirements.txt
 ```
 
-### 🔹 Run the Streamlit Dashboard
+### 🔹 Run the Streamlit App
 ```bash
 streamlit run dashboard.py
 ```
-
 🔗 Open in your browser: **http://localhost:8501/**  
 
 ---
 
-🚀 Live Website  
-<https://bhanuvi17-prediction-of-enso-events-dashboard-w3nzfx.streamlit.app/>  
+## 🚀 Live Dashboard  
+🔗 **[Streamlit App](https://bhanuvi17-prediction-of-enso-events-dashboard-w3nzfx.streamlit.app/)**
 
 ---
 
-🚀 Deploying on Streamlit Cloud  
+## 🚀 Deploying on Streamlit Cloud  
 
-### 1️⃣ **Push Code to GitHub**  
+### 1️⃣ **Push Code to GitHub**
 ```bash
 git add .
 git commit -m "Initial commit"
 git push origin main
 ```
 
-### 2️⃣ **Deploy on Streamlit:**  
-- Go to <https://share.streamlit.io/>  
-- Click **"New App"**  
+### 2️⃣ **Deploy on Streamlit:**
+- Go to [Streamlit Cloud](https://streamlit.io/cloud)
+- Click **New App**  
 - Connect to your GitHub repository  
-- Set the **Main file path:** `dashboard.py`  
+- Set **Main file path:** `dashboard.py`  
 - Click **Deploy** 🎉  
 
 ---
 
-🖼 Screenshots  
+## 📸 Screenshots
 
-### 🔹 **Web Interface**  
-![Home Page](https://github.com/bhanuvi17/Prediction-of-ENSO-Events/blob/ba223734e58fa39d2f4a48bef880722fa8acb655/Screenshot%202025-02-12%20232014.png)  
-
----
-
-🏆 Future Enhancements  
-
-✅ Train with larger datasets for improved accuracy  
-✅ Implement additional time series forecasting models (e.g., ARIMA, Prophet)  
-✅ Add real-time ONI data updates  
+### 🔹 **Web Interface**
+![Web App Screenshot](https://github.com/bhanuvi17/Prediction-of-ENSO-Events/blob/ba223734e58fa39d2f4a48bef880722fa8acb655/Screenshot%202025-02-12%20232014.png)
 
 ---
 
-🐝 License  
+## 🏆 Future Enhancements  
 
+✅ Add support for multiple time series forecasting models (e.g., ARIMA, Prophet)  
+✅ Improve UI with more interactive charts  
+✅ Allow user input for different datasets  
+
+---
+
+## 📜 License  
 This project is **open-source** under the [MIT License](LICENSE).  
 
 ---
 
 ### 💡 **Need Help?**  
 Feel free to **open an issue** or **contribute** to improve this project! 😊  
-🌟 If you like this project, give it a **star** on GitHub! 🌟  
+⭐ If you like this project, give it a **star** on GitHub! ⭐
 
