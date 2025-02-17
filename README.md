@@ -1,4 +1,4 @@
-# 🌊 ENSO Events Prediction using LSTM
+# 🌊 ENSO Events Prediction Using Historical Climate Data 
 
 This project performs **time series prediction** of the **Oceanic Niño Index (ONI)** using **Long Short-Term Memory (LSTM) networks**. The ONI time series is extracted from the dataset `ENSO.csv`, and the model forecasts the ONI values for the upcoming months based on historical data.
 
