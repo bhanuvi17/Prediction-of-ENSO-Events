@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS with selective green elements for better visibility
+# Custom CSS with selective green elements for better visibility and improved error handling
 st.markdown("""
     <style>
     .main {
@@ -50,6 +50,36 @@ st.markdown("""
     /* Improve date range selector visibility */
     .stDateInput input {
         border: 2px solid #2e7d32 !important;
+    }
+    
+    /* Improve error message visibility on mobile */
+    .stAlert {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+        padding: 15px !important;
+        margin-bottom: 15px !important;
+        border: 1px solid #f5c6cb !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Make error messages responsive */
+    @media (max-width: 768px) {
+        .stAlert {
+            font-size: 16px !important;
+            padding: 10px !important;
+        }
+        
+        /* Adjust plot sizes for mobile */
+        .stPlot {
+            height: 300px !important;
+        }
+        
+        /* Adjust padding for mobile */
+        .main > div {
+            padding: 0.5rem !important;
+        }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -98,12 +128,25 @@ def load_data_and_model():
         df_enso = pd.read_csv("ENSO.csv", parse_dates=[0])
         df_enso.set_index('Date', inplace=True)
         model = load_model('model_lstm.keras')
+        
+        # Add a simple verification test without showing success message
+        if model is not None:
+            input_shape = model.input_shape[1:]
+            sample_shape = (1,) + input_shape
+            sample_data = np.random.random(sample_shape)
+            _ = model.predict(sample_data)  # This will raise an error if model is incompatible
+        else:
+            st.sidebar.error("❌ Model failed to load")
+            return None, None
+            
         return df_enso, model
-    except FileNotFoundError:
-        st.error("Data or model files not found. Please check file paths.")
+    except FileNotFoundError as e:
+        st.error(f"File not found: {str(e)}")
+        st.sidebar.error("❌ Model or data file not found")
         return None, None
     except Exception as e:
-        st.error(f"Unexpected error: {str(e)}")
+        st.error(f"Error loading model: {str(e)}")
+        st.sidebar.error("❌ Model loading failed")
         return None, None
 
 def calculate_metrics(y_actual, y_predict):
@@ -246,9 +289,10 @@ def process_data(df_enso, model, date_range=None):
         columns=['Predicted']
     )
     
+    # Ensure we only keep exactly n_out months in the forecast
     y_forecast = pd.DataFrame(
         index=pd.date_range(start=df_reframed.index[-1], periods=n_out, freq='MS'),
-        data=y_hat[-1, :],
+        data=y_hat[-1, :n_out],  # Slice to ensure only n_out values are used
         columns=['Forecast']
     )
     
@@ -375,10 +419,27 @@ def create_enso_oni_plot(df_enso, date_range=None):
 def main():
     st.title("🌊 ENSO Prediction Dashboard")
     
+    # Updated: Replace deprecated function with current function
+    is_mobile = st.query_params.get('embed', ['false'])[0] == 'true' or \
+                st.sidebar.checkbox("Mobile view", value=False, key="mobile_view")
+    
+    if is_mobile:
+        st.markdown("""
+        <style>
+        .main > div {
+            padding: 0.5rem !important;
+        }
+        .stPlot {
+            height: 300px !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+    
     with st.spinner('Loading data and model...'):
         df_enso, model = load_data_and_model()
     
     if df_enso is None or model is None:
+        st.error("Cannot proceed without data and model. Please check the sidebar for more information.")
         return
     
     # Add date range selector and summary statistics
@@ -403,45 +464,60 @@ def main():
             step=0.1
         )
     
-    with st.spinner('Processing data...'):
-        y_actual, y_predict, y_forecast = process_data(df_enso, model, date_range)
+    try:
+        with st.spinner('Processing data...'):
+            y_actual, y_predict, y_forecast = process_data(df_enso, model, date_range)
+        
+        # 3-Month Forecast with keeping original colors
+        st.sidebar.header("3-Month Forecast")
+        for date, value in y_forecast.iterrows():
+            phase = "El Niño" if value['Forecast'] > 0.5 else "La Niña" if value['Forecast'] < -0.5 else "Neutral"
+            color = "red" if phase == "El Niño" else "blue" if phase == "La Niña" else "gray"
+            delta_color = f"<span style='color:{color}'>{phase}</span>"
+            st.sidebar.markdown(
+                f"**{date.strftime('%Y-%m')}**: {value['Forecast']:.2f} - {delta_color}",
+                unsafe_allow_html=True
+            )
+        
+        # Calculate and display metrics
+        st.header("Model Performance Metrics")
+        metrics = calculate_metrics(y_actual, y_predict)
+        cols = st.columns(3)
+        for i, (metric, value) in enumerate(metrics.items()):
+            cols[i].metric(metric, f"{value:.4f}")
+        
+        # Display plots
+        if plot_type in ["All Plots", "Predictions and Forecast"]:
+            st.header("ONI Predictions and Forecast")
+            fig = create_prediction_plot(y_actual, y_predict, y_forecast)
+            if show_confidence:
+                add_confidence_intervals(fig, y_forecast, confidence_level)
+            st.plotly_chart(fig, use_container_width=True)
+            add_plot_export(fig)
+        
+        if plot_type in ["All Plots", "ENSO-ONI Relationship"]:
+            st.header("ENSO-ONI Relationship")
+            fig = create_enso_oni_plot(df_enso, date_range)
+            st.plotly_chart(fig, use_container_width=True)
+            add_plot_export(fig, key_suffix="enso_oni")
+        
+        # Add download button for data
+        st.header("Download Data")
+        add_download_button(y_actual, y_predict, y_forecast)
     
-    # 3-Month Forecast with keeping original colors
-    st.sidebar.header("3-Month Forecast")
-    for date, value in y_forecast.iterrows():
-        phase = "El Niño" if value['Forecast'] > 0.5 else "La Niña" if value['Forecast'] < -0.5 else "Neutral"
-        color = "red" if phase == "El Niño" else "blue" if phase == "La Niña" else "gray"
-        delta_color = f"<span style='color:{color}'>{phase}</span>"
-        st.sidebar.markdown(
-            f"**{date.strftime('%Y-%m')}**: {value['Forecast']:.2f} - {delta_color}",
-            unsafe_allow_html=True
-        )
-    
-    # Calculate and display metrics
-    st.header("Model Performance Metrics")
-    metrics = calculate_metrics(y_actual, y_predict)
-    cols = st.columns(3)
-    for i, (metric, value) in enumerate(metrics.items()):
-        cols[i].metric(metric, f"{value:.4f}")
-    
-    # Display plots
-    if plot_type in ["All Plots", "Predictions and Forecast"]:
-        st.header("ONI Predictions and Forecast")
-        fig = create_prediction_plot(y_actual, y_predict, y_forecast)
-        if show_confidence:
-            add_confidence_intervals(fig, y_forecast, confidence_level)
-        st.plotly_chart(fig, use_container_width=True)
-        add_plot_export(fig)
-    
-    if plot_type in ["All Plots", "ENSO-ONI Relationship"]:
-        st.header("ENSO-ONI Relationship")
-        fig = create_enso_oni_plot(df_enso, date_range)
-        st.plotly_chart(fig, use_container_width=True)
-        add_plot_export(fig, key_suffix="enso_oni")
-    
-    # Add download button for data
-    st.header("Download Data")
-    add_download_button(y_actual, y_predict, y_forecast)
+    except Exception as e:
+        st.error(f"An error occurred during data processing: {str(e)}")
+        st.markdown("""
+        <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-top: 20px;">
+            <h3 style="margin-top: 0;">Troubleshooting Tips:</h3>
+            <ul>
+                <li>Check if your model and data files are correctly placed in the application directory</li>
+                <li>Verify that the model input shape matches what the code expects</li>
+                <li>Make sure the date range selected contains enough data for prediction</li>
+                <li>Try restarting the application</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
