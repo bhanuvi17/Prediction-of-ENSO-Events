@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
+# Custom CSS with selective green elements for better visibility
 st.markdown("""
     <style>
     .main {
@@ -31,6 +31,25 @@ st.markdown("""
         border-radius: 15px;
         padding: 20px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.17);
+    }
+    /* Red titles and headings ONLY */
+    h1, h2, h3 {
+        color: #008080 !important;
+        font-weight: bold !important;
+    }
+    /* Green download buttons ONLY */
+    .stDownloadButton button {
+        background-color: #ff6347 !important;
+        color: white !important;
+        border: none !important;
+    }
+    .stDownloadButton button:hover {
+        background-color: #1b5e20 !important;
+        color: white !important;
+    }
+    /* Improve date range selector visibility */
+    .stDateInput input {
+        border: 2px solid #2e7d32 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -108,26 +127,39 @@ def add_download_button(y_actual, y_predict, y_forecast):
     )
 
 def add_date_range_selector(df_enso):
-    min_date = df_enso.index.min()
-    max_date = df_enso.index.max()
-    date_range = st.sidebar.date_input(
-        "Select Date Range",
-        value=(min_date, max_date),
+    min_date = df_enso.index.min().to_pydatetime().date()
+    max_date = df_enso.index.max().to_pydatetime().date()
+    
+    # Fix: Convert pandas timestamps to Python date objects for the date picker
+    start_date = st.sidebar.date_input(
+        "Start Date",
+        value=min_date,
         min_value=min_date,
         max_value=max_date
     )
-    return date_range
+    end_date = st.sidebar.date_input(
+        "End Date",
+        value=max_date,
+        min_value=min_date,
+        max_value=max_date
+    )
+    
+    if start_date > end_date:
+        st.sidebar.error("End date must be after start date")
+        end_date = start_date
+    
+    return (start_date, end_date)
 
 def add_confidence_intervals(fig, y_forecast, std_dev=0.5):
     upper_bound = y_forecast['Forecast'] + 2 * std_dev
     lower_bound = y_forecast['Forecast'] - 2 * std_dev
     
-    # Upper Bound - Solid Red Line
+    # Upper Bound - Keep original red color
     fig.add_trace(go.Scatter(
         x=y_forecast.index,
         y=upper_bound,
         mode='lines',
-        line=dict(color='red', dash='dot'),  # Dashed red line
+        line=dict(color='red', dash='dot'),  # Keep original red dot line
         name='Upper Bound'
     ))
     
@@ -137,7 +169,7 @@ def add_confidence_intervals(fig, y_forecast, std_dev=0.5):
         y=lower_bound,
         fill='tonexty',  # This shades the area between lower and upper bounds
         mode='lines',
-        line=dict(color='rgba(255,0,0,0.1)'),  # Light red shade
+        line=dict(color='rgba(255,0,0,0.1)'),  # Keep original light red shade
         name='Lower Bound'
     ))  
 
@@ -165,13 +197,20 @@ def add_plot_export(fig, key_suffix=""):
     )
 
 
-def process_data(df_enso, model):
+def process_data(df_enso, model, date_range=None):
     n_in = 12
     n_out = 3
     n_features = 1
     n_steps = n_in
     
-    df_reframed = series_to_supervised(df_enso['ONI'], n_in, n_out, n_features)
+    # Filter by date range if provided
+    if date_range:
+        start_date, end_date = date_range
+        df_filtered = df_enso.loc[str(start_date):str(end_date)]
+    else:
+        df_filtered = df_enso.copy()
+    
+    df_reframed = series_to_supervised(df_filtered['ONI'], n_in, n_out, n_features)
     
     n = df_reframed.shape[0]
     n_train, n_valid = int(0.8 * n), int(0.1 * n)
@@ -225,32 +264,32 @@ def create_prediction_plot(y_actual, y_predict, y_forecast):
         if col not in df.columns:
             raise ValueError(f"Missing required column '{col}' in input DataFrame.")
 
-    # Add actual values
+    # Add actual values - keep original green
     fig.add_trace(go.Scatter(
         x=y_actual.index,
         y=y_actual['Actual'],
         name='Actual',
-        line=dict(color='black', width=2),
+        line=dict(color='green', width=2),
         customdata=y_actual.index,  # Pass date as custom data
         hovertemplate='Actual: %{y:.2f}<extra></extra>'  # Remove date from each trace
     ))
 
-    # Add predicted values
+    # Add predicted values - keep original blue
     fig.add_trace(go.Scatter(
         x=y_predict.index,
         y=y_predict['Predicted'],
         name='Predicted',
-        line=dict(color='blue', width=2),
+        line=dict(color='blue', width=2),  # Keep original blue
         customdata=y_predict.index,
         hovertemplate='Predicted: %{y:.2f}<extra></extra>'  # Remove duplicate date
     ))
 
-    # Add forecast values
+    # Add forecast values - keep original red
     fig.add_trace(go.Scatter(
         x=y_forecast.index,
         y=y_forecast['Forecast'],
         name='Forecast',
-        line=dict(color='red', width=2, dash='dash'),
+        line=dict(color='red', width=2, dash='dash'),  # Keep original red dash
         customdata=y_forecast.index,
         hovertemplate='Forecast: %{y:.2f}<extra></extra>'  # Remove duplicate date
     ))
@@ -260,13 +299,21 @@ def create_prediction_plot(y_actual, y_predict, y_forecast):
         xaxis_title='Years',
         yaxis_title='ONI',
         template='plotly_white',
-        hovermode='x unified'  # Keep hovermode unified
+        hovermode='x unified',  # Keep hovermode unified
+        title_font=dict(color='#2e7d32'),  # Green title ONLY
     )
 
     return fig
 
 
-def create_enso_oni_plot(df_enso):
+def create_enso_oni_plot(df_enso, date_range=None):
+    # Filter by date range if provided
+    if date_range:
+        start_date, end_date = date_range
+        df_filtered = df_enso.loc[str(start_date):str(end_date)]
+    else:
+        df_filtered = df_enso.copy()
+    
     fig = go.Figure()
     
     # Define ENSO phase boundaries
@@ -290,7 +337,7 @@ def create_enso_oni_plot(df_enso):
         
         # Position labels to the right outside the graph
         annotations.append(dict(
-            x=df_enso.index[-1],  # Align at the last year on the right
+            x=df_filtered.index[-1],  # Align at the last year on the right
             y=(y0 + y1) / 2,  # Centered in the middle of each phase
             text=label,
             showarrow=False,
@@ -299,12 +346,12 @@ def create_enso_oni_plot(df_enso):
             font=dict(size=12, color=color)
         ))
 
-    # Add ONI line
+    # Add ONI line - keep original black
     fig.add_trace(go.Scatter(
-        x=df_enso.index,
-        y=df_enso['ONI'],
+        x=df_filtered.index,
+        y=df_filtered['ONI'],
         name='ONI',
-        line=dict(color='black', width=2)
+        line=dict(color='black', width=2)  # Keep original black
     ))
 
     # Update layout
@@ -319,7 +366,8 @@ def create_enso_oni_plot(df_enso):
             tickmode='array',
             tickvals=[-2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5],  # Custom tick values
             ticktext=["-2.5", "-2", "-1.5", "-1", "-0.5", "0", "0.5", "1", "1.5", "2", "2.5"],  # Custom labels
-        )
+        ),
+        title_font=dict(color='#2e7d32'),  # Green title ONLY
     )
 
     return fig
@@ -332,11 +380,9 @@ def main():
     
     if df_enso is None or model is None:
         return
-        
-    with st.spinner('Processing data...'):
-        y_actual, y_predict, y_forecast = process_data(df_enso, model)
     
-    # Add summary statistics
+    # Add date range selector and summary statistics
+    date_range = add_date_range_selector(df_enso)
     add_summary_statistics(df_enso)
     
     # Sidebar controls
@@ -357,14 +403,18 @@ def main():
             step=0.1
         )
     
-    # 3-Month Forecast
+    with st.spinner('Processing data...'):
+        y_actual, y_predict, y_forecast = process_data(df_enso, model, date_range)
+    
+    # 3-Month Forecast with keeping original colors
     st.sidebar.header("3-Month Forecast")
     for date, value in y_forecast.iterrows():
         phase = "El Niño" if value['Forecast'] > 0.5 else "La Niña" if value['Forecast'] < -0.5 else "Neutral"
-        st.sidebar.metric(
-            date.strftime('%Y-%m'),
-            f"{value['Forecast']:.2f}",
-            delta=phase
+        color = "red" if phase == "El Niño" else "blue" if phase == "La Niña" else "gray"
+        delta_color = f"<span style='color:{color}'>{phase}</span>"
+        st.sidebar.markdown(
+            f"**{date.strftime('%Y-%m')}**: {value['Forecast']:.2f} - {delta_color}",
+            unsafe_allow_html=True
         )
     
     # Calculate and display metrics
@@ -385,7 +435,7 @@ def main():
     
     if plot_type in ["All Plots", "ENSO-ONI Relationship"]:
         st.header("ENSO-ONI Relationship")
-        fig = create_enso_oni_plot(df_enso)
+        fig = create_enso_oni_plot(df_enso, date_range)
         st.plotly_chart(fig, use_container_width=True)
         add_plot_export(fig, key_suffix="enso_oni")
     
