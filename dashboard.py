@@ -253,6 +253,15 @@ def process_data(df_enso, model, date_range=None):
     else:
         df_filtered = df_enso.copy()
     
+    # Get latest n_in values for prediction
+    latest_data = df_filtered['ONI'].values[-n_in:]
+    
+    # If we have enough data for prediction
+    if len(latest_data) < n_in:
+        st.error(f"Not enough data for prediction. Need {n_in} values but only have {len(latest_data)}.")
+        return None, None, None
+    
+    # For historical predictions
     df_reframed = series_to_supervised(df_filtered['ONI'], n_in, n_out, n_features)
     
     n = df_reframed.shape[0]
@@ -289,10 +298,21 @@ def process_data(df_enso, model, date_range=None):
         columns=['Predicted']
     )
     
-    # Ensure we only keep exactly n_out months in the forecast
+    # For future forecast (starting from month after last available data)
+    latest_data_reshaped = latest_data.reshape(1, n_in)
+    latest_data_scaled = x_scaler.transform(latest_data_reshaped)
+    latest_data_reshaped = latest_data_scaled.reshape(1, n_steps, n_features)
+    
+    latest_prediction = model.predict(latest_data_reshaped)
+    latest_prediction = np.round(y_scaler.inverse_transform(latest_prediction), 1)
+    
+    # Create forecast dates starting after the last date in the filtered dataframe
+    forecast_dates = pd.date_range(start=df_filtered.index[-1] + pd.DateOffset(months=1), 
+                               periods=n_out, freq='MS')
+    
     y_forecast = pd.DataFrame(
-        index=pd.date_range(start=df_reframed.index[-1], periods=n_out, freq='MS'),
-        data=y_hat[-1, :n_out],  # Slice to ensure only n_out values are used
+        index=forecast_dates,
+        data=latest_prediction[0],
         columns=['Forecast']
     )
     
@@ -467,6 +487,10 @@ def main():
     try:
         with st.spinner('Processing data...'):
             y_actual, y_predict, y_forecast = process_data(df_enso, model, date_range)
+            
+        if y_actual is None or y_predict is None or y_forecast is None:
+            st.error("Could not generate prediction data. Please check your date range selection.")
+            return
         
         # 3-Month Forecast with keeping original colors
         st.sidebar.header("3-Month Forecast")
