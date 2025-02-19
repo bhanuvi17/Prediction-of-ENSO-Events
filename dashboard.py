@@ -502,7 +502,7 @@ def main():
         st.sidebar.header("3-Month Forecast")
         for date, value in y_forecast.iterrows():
             phase = "El Niño" if value['Forecast'] > 0.5 else "La Niña" if value['Forecast'] < -0.5 else "Neutral"
-            color = "red" if phase == "El Niño" else "green" if phase == "La Niña" else "black"
+            color = "red" if phase == "El Niño" else "green" if phase == "La Niña" else "green"
             delta_color = f"<span style='color:{color}'>{phase}</span>"
             st.sidebar.markdown(
                 f"**{date.strftime('%Y-%m')}**: {value['Forecast']:.2f} - {delta_color}",
