@@ -52,6 +52,14 @@ st.markdown("""
         border: 2px solid #2e7d32 !important;
     }
     
+    /* Style for metrics */
+    [data-testid="stMetricValue"] {
+        background-color: #e8f5e9;
+        padding: 10px;
+        border-radius: 5px;
+        color: #2e7d32 !important;
+    }
+    
     /* Improve error message visibility on mobile */
     .stAlert {
         background-color: #f8d7da !important;
@@ -171,9 +179,8 @@ def add_download_button(y_actual, y_predict, y_forecast):
 
 def add_date_range_selector(df_enso):
     min_date = df_enso.index.min().to_pydatetime().date()
-    max_date = df_enso.index.max().to_pydatetime().date()
+    max_date = pd.Timestamp('2025-04-30').date()  # Extended to May 2025
     
-    # Fix: Convert pandas timestamps to Python date objects for the date picker
     start_date = st.sidebar.date_input(
         "Start Date",
         value=min_date,
@@ -186,7 +193,6 @@ def add_date_range_selector(df_enso):
         min_value=min_date,
         max_value=max_date
     )
-    
     if start_date > end_date:
         st.sidebar.error("End date must be after start date")
         end_date = start_date
@@ -496,7 +502,7 @@ def main():
         st.sidebar.header("3-Month Forecast")
         for date, value in y_forecast.iterrows():
             phase = "El Niño" if value['Forecast'] > 0.5 else "La Niña" if value['Forecast'] < -0.5 else "Neutral"
-            color = "red" if phase == "El Niño" else "blue" if phase == "La Niña" else "gray"
+            color = "red" if phase == "El Niño" else "green" if phase == "La Niña" else "black"
             delta_color = f"<span style='color:{color}'>{phase}</span>"
             st.sidebar.markdown(
                 f"**{date.strftime('%Y-%m')}**: {value['Forecast']:.2f} - {delta_color}",
